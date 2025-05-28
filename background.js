@@ -45,8 +45,18 @@ chrome.commands.onCommand.addListener(async (command) => {
       break;
 
     case "download_saved_texts":
-      chrome.runtime.sendMessage({ action: "download" });
-      break;
+      const savedTexts = await getSavedTexts();
+      if (savedTexts.length === 0) return;
+      const textToSave = savedTexts.join('\n\n');
+      const url = 'data:text/plain;charset=utf-8,' + encodeURIComponent(textToSave);
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      chrome.downloads.download({
+        url: url,
+        filename: `saved-text-${timestamp}.txt`,
+        saveAs: true
+      }, async () => {
+        await setSavedTexts([]);
+      });
   }
 });
 
