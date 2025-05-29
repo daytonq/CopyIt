@@ -14,6 +14,13 @@ function setSavedTexts(texts) {
   });
 }
 
+async function showToast(tabId, message = 'Saved!') {
+  await chrome.scripting.executeScript({
+    target: { tabId },
+    files: ['toast.js']
+  });
+}
+
 chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.removeAll(() => {
     chrome.contextMenus.create({
@@ -42,6 +49,7 @@ chrome.commands.onCommand.addListener(async (command) => {
           }
         }
       });
+      await showToast(tab.id);
       break;
 
     case "download_saved_texts":
@@ -66,6 +74,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
     let savedTexts = await getSavedTexts();
     savedTexts.push(info.selectionText.trim());
     await setSavedTexts(savedTexts);
+    await showToast(tab.id);
   } else if (info.menuItemId === "downloadTexts") {
 
     const savedTexts = await getSavedTexts();
