@@ -6,11 +6,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
   chrome.runtime.sendMessage({ action: 'getSavedTexts' }, (response) => {
     if (response && response.texts.length > 0) {
-      textArea.value = response.texts.join('\n\n');
+      textArea.value = response.texts
+        .map(item => item.count > 1 ? `${item.text} (×${item.count})` : item.text)
+        .join('\n\n');
     } else {
       textArea.placeholder = 'Пока ничего не сохранено.';
     }
   });
+
 
   saveChangesBtn.addEventListener('click', () => {
     const updatedTexts = textArea.value

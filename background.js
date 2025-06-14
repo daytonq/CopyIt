@@ -97,11 +97,20 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   (async () => {
     let savedTexts = await getSavedTexts();
     switch (request.action) {
-      case "saveText":
-        savedTexts.push(request.text);
+      case "saveText": {
+        const newText = request.text.trim();
+        const existingIndex = savedTexts.findIndex(item => item.text === newText);
+
+        if (existingIndex >= 0) {
+          savedTexts[existingIndex].count += 1;
+        } else {
+          savedTexts.push({ text: newText, count: 1 });
+        }
+
         await setSavedTexts(savedTexts);
         sendResponse({ status: "success" });
         break;
+      }
 
       case "getSavedTexts":
         sendResponse({ texts: savedTexts });
@@ -112,17 +121,29 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         sendResponse({ status: "cleared" });
         break;
 
-      case "overwriteSavedTexts":
-        await setSavedTexts(request.texts);
+      case "overwriteSavedTexts": {
+        const flattened = request.texts.flatMap(text => {
+          const match = text.match(/\s*\(×(\d+)\)$/);
+          const count = match ? parseInt(match[1]) : 1;
+          const cleanText = match ? text.replace(/\s*\(×\d+\)$/, '') : text;
+          return [{ text: cleanText.trim(), count }];
+        });
+
+        await setSavedTexts(flattened);
         sendResponse({ status: "overwritten" });
         break;
+      }
+
 
       case "download":
         if (savedTexts.length === 0) {
           sendResponse({ status: "empty" });
           return;
         }
-        const textToSave = savedTexts.join('\n\n');
+        const textToSave = savedTexts
+          .map(item => item.count > 1 ? `${item.text} (×${item.count})` : item.text)
+          .join('\n\n');
+
         const url = 'data:text/plain;charset=utf-8,' + encodeURIComponent(textToSave);
         const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
         chrome.downloads.download({
